@@ -112,81 +112,94 @@ function App() {
   };
 
   return (
-    <div className="bg-surface relative overflow-hidden min-h-screen">
+    <div className="bg-surface relative overflow-hidden min-h-screen selection:bg-brand/30">
       <Navbar />
 
-      {/* Background */}
-      <div className="absolute inset-0 mesh-bg pointer-events-none" />
+      {/* Cinematic Background Glows */}
+      <div className="absolute top-[10%] -left-[10%] w-[600px] h-[600px] bg-brand/10 blur-[120px] rounded-full pointer-events-none" />
+      <div className="absolute bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-accent-teal/10 blur-[100px] rounded-full pointer-events-none" />
+      <div className="absolute inset-0 mesh-bg opacity-30 pointer-events-none" />
 
       {/* Hero Section */}
-      <section className="relative pt-28 pb-16 px-6 max-w-7xl mx-auto flex flex-col lg:flex-row items-center justify-between gap-12 z-10 w-full min-h-[85vh]">
+      <section className="relative px-6 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-24 z-10 w-full min-h-[92vh] pt-32 lg:pt-0">
         <motion.div
           style={{ opacity: heroOpacity }}
-          className="flex-1 text-left relative z-20"
+          className="flex-1 text-center lg:text-left z-20"
         >
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="inline-flex flex-col mb-8"
+            className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-xl mb-8 shadow-2xl shadow-black/40 mx-auto lg:mx-0"
           >
-            <div className="badge-brand mb-6 w-max">
-              <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-brand opacity-60" />
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-brand" />
-              </span>
-              <span>Model v4.2 — Online</span>
-            </div>
-
-            <h1 className="text-5xl md:text-7xl font-extrabold text-tx-primary leading-[0.95] tracking-tight">
-              <motion.span
-                animate={{ opacity: [0.8, 1, 0.8] }}
-                transition={{ duration: 4, repeat: Infinity }}
-              >
-                AI Powered
-              </motion.span>{' '}
-              <br />
-              <span className="text-gradient-animate">Diagnostic</span>{' '}
-              <br />
-              Intelligence.
-            </h1>
+            <div className="w-2 h-2 rounded-full bg-brand animate-pulse shadow-[0_0_10px_rgba(88,166,255,1)]" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-white/60 text-center">Diagnostic Engine v2.5 — Online</span>
           </motion.div>
+
+          <h1 className="text-5xl md:text-8xl font-black leading-[0.95] tracking-tighter text-white mb-8 group select-none">
+            DIAGNOSTIC<br />
+            <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand via-accent-indigo to-brand bg-[length:200%_auto] animate-gradient drop-shadow-[0_0_30px_rgba(88,166,255,0.3)] italic">
+              INTELLIGENCE.
+            </span>
+          </h1>
 
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
-            className="text-lg text-tx-secondary max-w-lg mb-8 leading-relaxed font-medium"
+            className="text-lg lg:text-xl text-tx-secondary max-w-xl mb-12 leading-relaxed font-medium mx-auto lg:mx-0"
           >
-            Leverage enterprise-grade neural networks to analyze medical streams instantly and securely, achieving 99.8% precision across 5M+ annotated nodes.
+            Deploy enterprise-grade neural networks to analyze medical streams instantly and securely, achieving 99.8% precision across 5.4M+ annotated medical nodes.
           </motion.p>
 
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
             transition={{ delay: 0.2 }}
-            className="flex flex-wrap items-center gap-3"
+            className="flex flex-wrap items-center justify-center lg:justify-start gap-4 mb-14"
           >
-            <button className="btn-primary">
-              Deploy Node <ArrowRight className="w-4 h-4" />
+            <button className="px-8 py-4 rounded-xl bg-brand font-black text-xs uppercase tracking-widest text-tx-inverse shadow-[0_0_40px_rgba(88,166,255,0.3)] hover:scale-105 active:scale-95 transition-all flex items-center gap-3">
+              Deploy Diagnostic Node <ArrowRight className="w-4 h-4" />
             </button>
-            <button onClick={() => window.location.href='/admin'} className="btn-secondary">
-              Access Telemetry <ExternalLink className="w-4 h-4 opacity-60" />
+            <button onClick={() => window.location.href='/admin'} className="px-8 py-4 rounded-xl bg-white/5 border border-white/10 font-black text-xs uppercase tracking-widest text-white hover:bg-white/10 hover:border-white/20 transition-all flex items-center gap-3 backdrop-blur-md">
+              Access Telemetry <ExternalLink className="w-4 h-4 opacity-50" />
             </button>
           </motion.div>
-        </motion.div>
 
-        {/* Upload Interface */}
+          {/* Clinical Live Stats */}
+          <div className="grid grid-cols-2 md:grid-cols-3 gap-8 lg:gap-12 pt-10 border-t border-white/5 max-w-lg mx-auto lg:mx-0">
+            <div>
+              <div className="text-3xl font-black text-white leading-none">99.8<span className="text-brand">%</span></div>
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-2">Precision</div>
+            </div>
+            <div>
+              <div className="text-3xl font-black text-white leading-none">1.2<span className="text-brand">s</span></div>
+              <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-2">Inference</div>
+            </div>
+              <div className="hidden md:block">
+                <div className="text-3xl font-black text-white leading-none">256<span className="text-brand">+</span></div>
+                <div className="text-[10px] font-bold text-white/30 uppercase tracking-widest mt-2">Modalities</div>
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Global Control Interface */}
         <motion.div
-          initial={{ opacity: 0, x: 40 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.6, delay: 0.3 }}
-          className="flex-1 w-full relative z-20"
+          initial={{ opacity: 0, x: 50, rotateY: -10 }}
+          animate={{ opacity: 1, x: 0, rotateY: 0 }}
+          transition={{ duration: 1, delay: 0.4 }}
+          className="flex-1 w-full relative z-20 group perspective-1000"
         >
-          <MedicalScanUploadZone
-            onUpload={handleScanUpload}
-            isProcessing={isLoading}
-            error={error}
-          />
+          <div className="absolute -inset-1 bg-gradient-to-r from-brand to-accent-indigo rounded-[2rem] blur opacity-20 group-hover:opacity-40 transition duration-1000 group-hover:duration-200" />
+          <div className="relative bg-black/40 backdrop-blur-3xl border border-white/10 rounded-[3xl] p-4 lg:p-8 shadow-2xl overflow-hidden min-h-[400px]">
+            {/* Interface Scanning Line */}
+            <div className="absolute top-0 left-0 w-full h-[2px] bg-brand/30 shadow-[0_0_20px_rgba(88,166,255,0.5)] animate-scan-y z-30 pointer-events-none" />
+            
+            <MedicalScanUploadZone
+              onUpload={handleScanUpload}
+              isProcessing={isLoading}
+              error={error}
+            />
+          </div>
         </motion.div>
       </section>
 
