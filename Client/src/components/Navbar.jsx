@@ -100,20 +100,45 @@ const Navbar = () => {
             exit={{ opacity: 0, height: 0 }}
             className="md:hidden bg-surface-raised/95 backdrop-blur-xl border-b border-edge overflow-hidden"
           >
-            <div className="p-4 space-y-2">
+            <div className="p-4 space-y-3">
+              {user && (
+                <div className="py-4 px-2 border-b border-white/5 mb-2">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className={`w-2.5 h-2.5 rounded-full ${user.isAdmin ? 'bg-accent-rose' : 'bg-accent-emerald animate-pulse'}`} />
+                    <span className="text-sm font-bold text-tx-primary uppercase tracking-wider">{user.name}</span>
+                  </div>
+                  <button 
+                    onClick={() => { logout(); setMobileMenuOpen(false); }}
+                    className="w-full text-center py-2.5 rounded-xl text-xs font-black uppercase tracking-[0.15em] text-accent-rose/80 border border-accent-rose/20 hover:bg-accent-rose/10 transition-all"
+                  >
+                    Terminate Session
+                  </button>
+                </div>
+              )}
+
+              {user?.isAdmin && (
+                <Link
+                  to="/admin"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="block w-full text-center py-3 rounded-xl text-xs font-black uppercase tracking-widest text-brand border border-brand/20 bg-brand/5 hover:bg-brand/10 transition-all mb-2"
+                >
+                  Owner Console
+                </Link>
+              )}
+
               <Link
                 to="/dashboard"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center py-3 rounded-xl text-sm font-medium text-tx-secondary hover:text-tx-primary hover:bg-surface-overlay transition-all"
+                className="block w-full text-center py-3.5 rounded-xl text-sm font-bold bg-surface-raised border border-edge text-tx-secondary hover:text-tx-primary transition-all"
               >
                 Dashboard
               </Link>
               <Link
                 to="/scan"
                 onClick={() => setMobileMenuOpen(false)}
-                className="block w-full text-center py-3 rounded-xl text-sm font-semibold bg-brand text-tx-inverse"
+                className="block w-full text-center py-4 rounded-xl text-sm font-black uppercase tracking-widest bg-brand text-tx-inverse shadow-lg shadow-brand/20"
               >
-                Start Scan
+                Launch Diagnostic Scan
               </Link>
             </div>
           </motion.div>

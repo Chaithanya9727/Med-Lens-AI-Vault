@@ -557,12 +557,12 @@ const ScanPage = () => {
             className="fixed inset-0 z-[1500] flex items-center justify-center p-4 bg-black/40 backdrop-blur-[20px]"
           >
             <motion.div
-              initial={{ scale: 0.95, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="relative w-full max-w-6xl h-full max-h-[95vh] bg-white/[0.03] rounded-3xl border border-white/10 shadow-[0_8px_32px_0_rgba(0,0,0,0.5)] flex flex-col lg:flex-row overflow-hidden overflow-y-auto lg:overflow-hidden backdrop-blur-3xl"
+              initial={{ scale: 0.98, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              className="relative w-full max-w-7xl h-full lg:max-h-[92vh] bg-white/[0.02] rounded-3xl border border-white/10 shadow-2xl flex flex-col lg:flex-row overflow-hidden backdrop-blur-3xl"
             >
               {/* Left: Imaging Panel */}
-              <div className="w-full lg:w-[45%] h-[40vh] lg:h-full relative border-b lg:border-b-0 lg:border-r border-white/10 overflow-hidden bg-black/30 flex flex-col justify-center items-center p-6">
+              <div className="w-full lg:w-[48%] h-[45vh] lg:h-full relative border-b lg:border-b-0 lg:border-r border-white/10 bg-black/40 flex flex-col justify-center items-center p-4 lg:p-10">
                 {/* Status pill */}
                 <div className="absolute top-5 left-5 z-30 flex items-center gap-2">
                   <div className="flex items-center gap-2 bg-black/50 backdrop-blur-md border border-white/10 px-3 py-1.5 rounded-full shadow-lg">
@@ -584,7 +584,7 @@ const ScanPage = () => {
                       ref={imgRef}
                       src={imagePreview}
                       alt="Clinical Diagnostic View"
-                      className="max-h-[65vh] w-auto h-auto block select-none mix-blend-screen"
+                      className="max-h-[35vh] lg:max-h-[70vh] w-auto h-auto block select-none mix-blend-screen transition-transform duration-700"
                     />
 
                     {/* Scanning Animation (Locked to Image) */}
@@ -669,12 +669,12 @@ const ScanPage = () => {
               </div>
 
               {/* Right: Analysis Panel */}
-              <div className="flex-1 overflow-y-auto p-8 lg:p-10 custom-scrollbar relative bg-transparent">
+              <div className="flex-1 overflow-y-auto p-5 md:p-8 lg:p-12 custom-scrollbar relative bg-transparent selection:bg-brand/20">
                 {!diagnosisResult ? (
-                  <div className="h-full flex flex-col justify-center gap-8 max-w-md mx-auto">
-                    <h2 className="text-4xl font-extrabold leading-none tracking-tight text-white drop-shadow-md">
+                  <div className="h-[40vh] lg:h-full flex flex-col justify-center items-center text-center gap-6 lg:gap-10 max-w-md mx-auto py-10 lg:py-0">
+                    <h2 className="text-3xl lg:text-4xl font-black leading-none tracking-tight text-white drop-shadow-xl uppercase italic">
                       Synthesizing<br />
-                      <span className="text-brand drop-shadow-[0_0_15px_rgba(88,166,255,0.4)]">Clinical Core...</span>
+                      <span className="text-brand drop-shadow-[0_0_20px_rgba(88,166,255,0.4)]">Clinical Core</span>
                     </h2>
                     <TerminalStreamer />
                   </div>
