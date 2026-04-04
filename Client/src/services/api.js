@@ -2,7 +2,7 @@ import axios from 'axios';
 
 // Create an Axios instance specifically configured for our backend
 const api = axios.create({
-  baseURL: 'http://localhost:5000/api',
+  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5000/api',
   // Large file uploads might take time, setting a healthy timeout
   timeout: 60000, // 60s for real Gemini Vision inference on large scans
 });
