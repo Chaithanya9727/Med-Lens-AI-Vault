@@ -579,73 +579,81 @@ const ScanPage = () => {
                 </div>
 
                 {imagePreview ? (
-                  <div className="roi-container relative w-full h-full flex items-center justify-center">
-                    {/* Scan image */}
+                  <div className="relative inline-block mx-auto group ring-1 ring-white/10 shadow-2xl rounded-xl overflow-hidden bg-black/40">
                     <img
                       ref={imgRef}
                       src={imagePreview}
-                      alt="Scan"
-                      onLoad={updateImgRect}
-                      className="max-w-full max-h-full object-contain rounded-xl shadow-[0_0_50px_rgba(0,0,0,0.6)] pointer-events-none select-none mix-blend-screen"
-                      style={{ display: 'block' }}
+                      alt="Clinical Diagnostic View"
+                      className="max-h-[65vh] w-auto h-auto block select-none mix-blend-screen"
                     />
 
-                    {/* Scanning line while loading */}
+                    {/* Scanning Animation (Locked to Image) */}
                     {isLoading && (
                       <motion.div
-                        initial={{ top: imgRect ? imgRect.top : '0%' }}
-                        animate={{ top: imgRect ? imgRect.top + imgRect.height : '100%' }}
-                        transition={{ duration: 2, repeat: Infinity, ease: 'linear' }}
+                        initial={{ top: 0 }}
+                        animate={{ top: '100%' }}
+                        transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                         className="absolute left-0 w-full h-[2px] bg-brand shadow-[0_0_15px_rgba(88,166,255,0.8)] z-20 pointer-events-none"
                       />
                     )}
 
-                    {/* ROI overlay — positioned exactly over the rendered image */}
-                    {!isLoading && diagnosisResult?.roiRegions && imgRect && (
-                      <div
-                        className="absolute pointer-events-none z-20"
-                        style={{
-                          left: imgRect.left,
-                          top: imgRect.top,
-                          width: imgRect.width,
-                          height: imgRect.height,
-                        }}
-                      >
+                    {/* AI Diagnostic Layer (Anchored to Image) */}
+                    {diagnosisResult?.roiRegions && (
+                      <div className="absolute inset-0 pointer-events-none z-10">
                         {diagnosisResult.roiRegions.map((roi, idx) => {
-                          const circlePx = (roi.radius / 100) * Math.min(imgRect.width, imgRect.height) * 2;
+                          const size = roi.radius ? `${roi.radius * 2}%` : '15%';
                           return (
                             <motion.div
                               key={idx}
                               title={roi.label}
                               initial={{ scale: 0, opacity: 0 }}
                               animate={{ scale: 1, opacity: 1 }}
-                              transition={{ delay: 0.3 + idx * 0.12 }}
-                              className={`absolute rounded-full border border-white/40 ${
-                                roi.severity === 'critical' ? 'shadow-[0_0_20px_rgba(244,112,103,0.8)] bg-accent-rose/20 backdrop-blur-sm' :
-                                roi.severity === 'suspicious' ? 'shadow-[0_0_20px_rgba(250,189,47,0.8)] bg-accent-amber/20 backdrop-blur-sm' :
-                                roi.severity === 'monitor' ? 'shadow-[0_0_20px_rgba(113,113,250,0.8)] bg-accent-indigo/20 backdrop-blur-sm' :
-                                'shadow-[0_0_20px_rgba(61,219,217,0.8)] bg-accent-teal/20 backdrop-blur-sm'
+                              whileHover={{ scale: 1.25, zIndex: 50 }}
+                              transition={{ 
+                                initial: { duration: 0.5 },
+                                whileHover: { type: "spring", stiffness: 300, damping: 15 }
+                              }}
+                              className={`absolute rounded-full border-2 cursor-crosshair group pointer-events-auto ${
+                                roi.severity === 'critical' ? 'border-accent-rose bg-accent-rose/20' :
+                                roi.severity === 'suspicious' ? 'border-accent-amber bg-accent-amber/20' :
+                                'border-accent-teal bg-accent-teal/20'
                               }`}
                               style={{
                                 left: `${roi.x}%`,
                                 top: `${roi.y}%`,
-                                width: circlePx,
-                                height: circlePx,
+                                width: size,
+                                aspectRatio: '1/1',
                                 transform: 'translate(-50%, -50%)',
+                                boxShadow: roi.severity === 'critical' 
+                                  ? '0 0 35px rgba(244,112,103,0.8)' 
+                                  : '0 0 25px rgba(61,219,217,0.6)'
                               }}
                             >
-                              {/* Label */}
-                              <div
-                                className={`absolute -top-7 left-1/2 -translate-x-1/2 px-3 py-1 rounded backdrop-blur-md border border-white/20 text-[10px] font-bold whitespace-nowrap shadow-[0_8px_16px_rgba(0,0,0,0.4)] pointer-events-auto ${
-                                  roi.severity === 'critical' ? 'bg-accent-rose/80 text-white' :
-                                  roi.severity === 'suspicious' ? 'bg-accent-amber/80 text-black' :
-                                  'bg-surface-overlay/80 text-white'
+                              {/* Radar Pulse Effect */}
+                              <motion.div 
+                                animate={{ scale: [1, 1.8], opacity: [0.5, 0] }}
+                                transition={{ duration: 2, repeat: Infinity }}
+                                className={`absolute inset-0 rounded-full border-2 ${
+                                  roi.severity === 'critical' ? 'border-accent-rose' : 'border-accent-teal'
+                                }`}
+                              />
+
+                              {/* Interactive Label (Appears on Hover) */}
+                              <motion.div
+                                initial={{ opacity: 0, y: 0, scale: 0.8 }}
+                                whileHover={{ opacity: 1, y: -12, scale: 1 }}
+                                className={`absolute -top-12 left-1/2 -translate-x-1/2 px-4 py-2 rounded-xl backdrop-blur-2xl border-2 text-[12px] font-black uppercase tracking-widest whitespace-nowrap shadow-[0_20px_50px_rgba(0,0,0,0.6)] transition-all pointer-events-none z-50 ${
+                                  roi.severity === 'critical' ? 'bg-accent-rose text-white border-accent-rose/50' :
+                                  roi.severity === 'suspicious' ? 'bg-accent-amber text-black border-accent-amber/50' :
+                                  'bg-brand text-white border-brand/50'
                                 }`}
                               >
                                 {roi.label}
-                              </div>
-                              {/* Centre dot */}
-                              <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 opacity-100 shadow-[0_0_8px_white]" />
+                                <div className="absolute -bottom-1.5 left-1/2 -translate-x-1/2 w-3 h-3 rotate-45 border-r-2 border-b-2 inherit-bg opacity-50 bg-inherit" />
+                              </motion.div>
+
+                              {/* Clinical Center Point */}
+                              <div className="absolute top-1/2 left-1/2 w-1.5 h-1.5 bg-white rounded-full -translate-x-1/2 -translate-y-1/2 shadow-[0_0_10px_white]" />
                             </motion.div>
                           );
                         })}
