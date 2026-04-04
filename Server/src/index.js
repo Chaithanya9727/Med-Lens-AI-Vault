@@ -207,9 +207,9 @@ async function callGemini(base64Image, mimeType, promptText, retryCount = 0) {
 }
 
 // ═══════════════════════════════════════════════════════════
-//   MAIN DIAGNOSTIC ENDPOINT
+//   MAIN DIAGNOSTIC ENDPOINT (UNIVERSAL ROUTER)
 // ═══════════════════════════════════════════════════════════
-app.post('/api/upload', upload.single('scan'), async (req, res) => {
+app.post(['/api/upload', '/upload'], upload.single('scan'), async (req, res) => {
   try {
     if (!req.file) return res.status(400).json({ status: 'error', message: 'No file.' });
 
