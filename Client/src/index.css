@@ -1,0 +1,291 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ═══════════════════════════════════════
+   DESIGN SYSTEM — Med-Lens AI Vault
+   Professional Clinical Dark Theme
+   ═══════════════════════════════════════ */
+
+/* Color tokens as CSS custom properties */
+:root {
+  --surface: #07090F;
+  --surface-raised: #0D1117;
+  --surface-overlay: #161B22;
+  --surface-subtle: #1C2128;
+
+  --brand: #58A6FF;
+  --brand-light: #79C0FF;
+  --brand-dark: #388BFD;
+  --brand-muted: #1F3D5C;
+
+  --accent-teal: #3DDBD9;
+  --accent-indigo: #8B8FFF;
+  --accent-emerald: #3FB950;
+  --accent-amber: #D29922;
+  --accent-rose: #F47067;
+
+  --text-primary: #E6EDF3;
+  --text-secondary: #8B949E;
+  --text-muted: #484F58;
+  --text-inverse: #07090F;
+
+  --border: rgba(255,255,255,0.08);
+  --border-hover: rgba(255,255,255,0.16);
+  --border-active: rgba(88,166,255,0.4);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  body {
+    background-color: var(--surface);
+    color: var(--text-primary);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    overflow-x: hidden;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  ::selection {
+    background-color: rgba(88,166,255,0.3);
+    color: var(--brand-light);
+  }
+}
+
+@layer components {
+  /* Glass card — the workhorse UI surface */
+  .glass-card {
+    background-color: rgba(13,17,23,0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03) inset,
+      0 1px 2px rgba(0,0,0,0.4),
+      0 4px 16px rgba(0,0,0,0.2);
+  }
+
+  .glass-card-hover {
+    background-color: rgba(13,17,23,0.8);
+    backdrop-filter: blur(24px);
+    -webkit-backdrop-filter: blur(24px);
+    border: 1px solid var(--border);
+    border-radius: 1rem;
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.03) inset,
+      0 1px 2px rgba(0,0,0,0.4),
+      0 4px 16px rgba(0,0,0,0.2);
+    transition: all 0.3s ease;
+  }
+
+  .glass-card-hover:hover {
+    border-color: var(--border-hover);
+    box-shadow:
+      0 0 0 1px rgba(255,255,255,0.06) inset,
+      0 4px 24px rgba(0,0,0,0.3),
+      0 0 40px rgba(88,166,255,0.05);
+  }
+
+  /* Gradient text utility */
+  .text-gradient {
+    background: linear-gradient(to right, var(--brand-light), var(--accent-teal), var(--accent-indigo));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+
+  .text-gradient-animate {
+    background: linear-gradient(to right, var(--brand-light), var(--accent-teal), var(--accent-indigo));
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: shimmer 6s ease-in-out infinite;
+  }
+
+  /* Professional badge/pill */
+  .badge {
+    @apply inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-[11px] font-semibold tracking-wide border;
+  }
+
+  .badge-brand {
+    @apply badge;
+    background-color: rgba(88,166,255,0.1);
+    color: var(--brand);
+    border-color: rgba(88,166,255,0.2);
+  }
+
+  .badge-teal {
+    @apply badge;
+    background-color: rgba(61,219,217,0.1);
+    color: var(--accent-teal);
+    border-color: rgba(61,219,217,0.2);
+  }
+
+  .badge-rose {
+    @apply badge;
+    background-color: rgba(244,112,103,0.1);
+    color: var(--accent-rose);
+    border-color: rgba(244,112,103,0.2);
+  }
+
+  .badge-emerald {
+    @apply badge;
+    background-color: rgba(63,185,80,0.1);
+    color: var(--accent-emerald);
+    border-color: rgba(63,185,80,0.2);
+  }
+
+  .badge-amber {
+    @apply badge;
+    background-color: rgba(210,153,34,0.1);
+    color: var(--accent-amber);
+    border-color: rgba(210,153,34,0.2);
+  }
+
+  /* Section spacing */
+  .section-padding {
+    @apply py-24 px-6;
+  }
+
+  /* Button styles */
+  .btn-primary {
+    @apply inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200;
+    background-color: var(--brand);
+    color: var(--text-inverse);
+    box-shadow: 0 0 15px rgba(88,166,255,0.15);
+  }
+
+  .btn-primary:hover {
+    background-color: var(--brand-light);
+    box-shadow: 0 0 30px rgba(88,166,255,0.2);
+  }
+
+  .btn-primary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center gap-2.5 px-7 py-3.5 rounded-xl font-semibold text-sm transition-all duration-200;
+    background-color: var(--surface-overlay);
+    color: var(--text-primary);
+    border: 1px solid var(--border);
+  }
+
+  .btn-secondary:hover {
+    background-color: var(--surface-subtle);
+    border-color: var(--border-hover);
+  }
+
+  .btn-secondary:active {
+    transform: scale(0.98);
+  }
+
+  .btn-ghost {
+    @apply inline-flex items-center justify-center gap-2 px-4 py-2 rounded-lg font-medium text-sm transition-all duration-200;
+    color: var(--text-secondary);
+  }
+
+  .btn-ghost:hover {
+    color: var(--text-primary);
+    background-color: var(--surface-overlay);
+  }
+}
+
+@layer utilities {
+  .mesh-bg {
+    background-image:
+      radial-gradient(ellipse 80% 60% at 50% -20%, rgba(88,166,255,0.08) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 80% 60%, rgba(61,219,217,0.04) 0%, transparent 50%),
+      radial-gradient(ellipse 50% 40% at 20% 80%, rgba(139,143,255,0.04) 0%, transparent 50%);
+  }
+
+  .grid-pattern {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='60' height='60'%3E%3Cpath d='M60 0H0v60h60z' fill='none' stroke='rgba(255,255,255,0.03)' stroke-width='0.5'/%3E%3C/svg%3E");
+  }
+
+  .dot-pattern {
+    background-image: radial-gradient(circle, rgba(255,255,255,0.04) 1px, transparent 1px);
+    background-size: 24px 24px;
+  }
+}
+
+/* ═══════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════ */
+
+@keyframes shimmer {
+  0%, 100% { background-position: 0% 50%; }
+  50% { background-position: 200% 50%; }
+}
+
+@keyframes marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+
+.animate-marquee {
+  animation: marquee 40s linear infinite;
+}
+
+/* ═══════════════════════════════════════
+   SCROLLBAR
+   ═══════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #07090F;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1C2128;
+  border-radius: 8px;
+  border: 2px solid #07090F;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #2D333B;
+}
+
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.08);
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.15);
+}
+
+/* ═══════════════════════════════════════
+   MISC
+   ═══════════════════════════════════════ */
+
+.animate-fade-in {
+  animation: fadeIn 0.5s ease-out forwards;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
