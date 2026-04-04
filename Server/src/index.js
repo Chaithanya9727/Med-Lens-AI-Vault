@@ -506,4 +506,17 @@ app.get('/api/admin/global-data', (req, res) => {
   });
 });
 
+// ═══════════════════════════════════════════════════════════
+//   FRONTEND STATIC SERVING (ALL-IN-ONE DEPLOYMENT)
+// ═══════════════════════════════════════════════════════════
+const clientDistPath = path.join(__dirname, '../../Client/dist');
+if (fs.existsSync(clientDistPath)) {
+  app.use(express.static(clientDistPath));
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api')) {
+      res.sendFile(path.join(clientDistPath, 'index.html'));
+    }
+  });
+}
+
 app.listen(PORT, () => console.log(`🚀 Clinical Engine Online: Port ${PORT} | Gemini 2.5 Flash`));
