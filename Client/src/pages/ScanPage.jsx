@@ -433,14 +433,14 @@ const ScanPage = () => {
       {/* Chat FAB */}
       <AnimatePresence>
         {isChatOpen && (
-          <div className="fixed bottom-8 right-8 z-[1000] w-full max-w-xs md:max-w-sm">
+          <div className="fixed bottom-8 right-8 z-[9999] w-full max-w-xs md:max-w-sm">
             <NeuralClinicalChat scanContext={diagnosisResult || pinnedScans[0]} onClose={() => setIsChatOpen(false)} />
           </div>
         )}
         {!isChatOpen && (diagnosisResult || pinnedScans.length > 0) && (
           <button
             onClick={() => setIsChatOpen(true)}
-            className="fixed bottom-8 right-8 z-[1000] w-12 h-12 btn-primary rounded-full shadow-glow-md flex items-center justify-center p-0"
+            className="fixed bottom-8 right-8 z-[9999] w-12 h-12 btn-primary rounded-full shadow-glow-md flex items-center justify-center p-0"
           >
             <MessageSquareCode size={20} />
           </button>

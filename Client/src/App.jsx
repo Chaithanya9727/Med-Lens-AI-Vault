@@ -6,6 +6,7 @@ import Navbar from './components/Navbar';
 import FeatureSection from './components/FeatureSection';
 import InfoSections from './components/InfoSections';
 import { useAuth } from './components/AuthOverlay';
+import MedicalVisualizer3D from './components/MedicalVisualizer3D';
 import api, { setupInterceptors } from './services/api';
 import { Activity, ArrowRight, ExternalLink, Download, X } from 'lucide-react';
 
@@ -115,10 +116,11 @@ function App() {
     <div className="bg-surface relative overflow-hidden min-h-screen selection:bg-brand/30">
       <Navbar />
 
-      {/* Cinematic Background Glows */}
-      <div className="absolute top-[10%] -left-[10%] w-[600px] h-[600px] bg-brand/10 blur-[120px] rounded-full pointer-events-none" />
-      <div className="absolute bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-accent-teal/10 blur-[100px] rounded-full pointer-events-none" />
-      <div className="absolute inset-0 mesh-bg opacity-30 pointer-events-none" />
+      {/* Cinematic Background Glows & 3D DNA */}
+      <MedicalVisualizer3D />
+      <div className="absolute top-[10%] -left-[10%] w-[600px] h-[600px] bg-brand/10 blur-[120px] rounded-full pointer-events-none z-0" />
+      <div className="absolute bottom-[20%] -right-[10%] w-[500px] h-[500px] bg-accent-teal/10 blur-[100px] rounded-full pointer-events-none z-0" />
+      <div className="absolute inset-0 mesh-bg opacity-30 pointer-events-none z-0" />
 
       {/* Hero Section */}
       <section className="relative px-6 max-w-7xl mx-auto flex flex-col lg:flex-row items-center gap-16 lg:gap-24 z-10 w-full min-h-[92vh] pt-32 lg:pt-0">

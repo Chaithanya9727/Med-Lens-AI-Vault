@@ -171,10 +171,14 @@ function classifySeverity(diagnosis, confidence, conditions) {
   return 'monitor';
 }
 
-// ─── Gemini Call Helper ───
-async function callGemini(base64Image, mimeType, promptText, retryCount = 0) {
+// ─── Model Fallback Chain ───
+const MODEL_CHAIN = ['gemini-2.0-flash', 'gemini-2.5-flash', 'gemini-2.0-flash-lite'];
+
+// ─── Gemini Call Helper (with model fallback) ───
+async function callGemini(base64Image, mimeType, promptText, retryCount = 0, modelIndex = 0) {
+  const modelId = MODEL_CHAIN[modelIndex] || MODEL_CHAIN[0];
   try {
-    const modelId = "gemini-2.5-flash"; // Restored Enterprise Node Designation
+    console.log(`🔬 [GEMINI] Using model: ${modelId} (attempt ${retryCount + 1})`);
     const response = await ai.models.generateContent({
       model: modelId,
       contents: [{
@@ -198,9 +202,49 @@ async function callGemini(base64Image, mimeType, promptText, retryCount = 0) {
 
     return JSON.parse(rawText);
   } catch (err) {
+    const errMsg = err.message || '';
+    // If rate-limited or model unavailable, try next model in chain
+    if ((errMsg.includes('429') || errMsg.includes('503') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('UNAVAILABLE')) && modelIndex < MODEL_CHAIN.length - 1) {
+      console.warn(`⚠️ Model ${modelId} unavailable, falling back to ${MODEL_CHAIN[modelIndex + 1]}...`);
+      return callGemini(base64Image, mimeType, promptText, 0, modelIndex + 1);
+    }
     if (retryCount < 2) {
-      console.warn(`⚠️ RETRYING INFERENCE [${retryCount+1}]...`);
-      return callGemini(base64Image, mimeType, promptText, retryCount + 1);
+      console.warn(`⚠️ RETRYING INFERENCE [${retryCount+1}] on ${modelId}...`);
+      return callGemini(base64Image, mimeType, promptText, retryCount + 1, modelIndex);
+    }
+    throw err;
+  }
+}
+
+// ─── Text-only Gemini call (for chat — with model fallback) ───
+async function callGeminiText(contents, modelIndex = 0) {
+  const modelId = MODEL_CHAIN[modelIndex] || MODEL_CHAIN[0];
+  try {
+    console.log(`🧠 [CHAT-GEMINI] Using model: ${modelId}`);
+    const response = await ai.models.generateContent({
+      model: modelId,
+      contents: contents,
+      config: {
+        temperature: 0.7,
+        maxOutputTokens: 2048,
+        topP: 0.9,
+        topK: 40
+      }
+    });
+
+    let text = '';
+    try { text = response.text || ''; } catch (e) {}
+    if (!text && response.candidates && response.candidates[0]?.content?.parts) {
+      text = response.candidates[0].content.parts.map(p => p.text || '').join('');
+    }
+    
+    if (!text) throw new Error('Empty response from model');
+    return text;
+  } catch (err) {
+    const errMsg = err.message || '';
+    if ((errMsg.includes('429') || errMsg.includes('503') || errMsg.includes('RESOURCE_EXHAUSTED') || errMsg.includes('UNAVAILABLE') || errMsg.includes('Empty response')) && modelIndex < MODEL_CHAIN.length - 1) {
+      console.warn(`⚠️ Chat model ${modelId} unavailable, falling back to ${MODEL_CHAIN[modelIndex + 1]}...`);
+      return callGeminiText(contents, modelIndex + 1);
     }
     throw err;
   }
@@ -380,45 +424,170 @@ IMPORTANT:
 });
 
 // ═══════════════════════════════════════════════════════════
-//   NEURAL-CHAT: CLINICAL ASSISTANT ENDPOINT
+//   NEURAL-CHAT: CLINICAL ASSISTANT ENDPOINT (v3.0)
+//   World-class multi-turn clinical reasoning engine
 // ═══════════════════════════════════════════════════════════
 app.post('/api/chat', async (req, res) => {
   const { question, scanContext, history } = req.body;
   if (!question || !scanContext) return res.status(400).json({ status: 'error', message: 'Missing query parameters.' });
 
+  console.log(`\n🧠 [NEURAL-CHAT] Question: "${question}"`);
+  console.log(`🧠 [NEURAL-CHAT] Diagnosis context: "${scanContext.diagnosis}"`);
+
   try {
-    const formattedHistory = history ? history.map(h => `${h.role.toUpperCase()}: ${h.content}`).join('\n') + '\n\n' : '';
+    // ── Build compact but complete clinical context ──
+    const conditionsList = (scanContext.conditions || [])
+      .map(c => `${c.name} (${c.probability}%, ${c.severity}, ${c.location || 'N/A'})`).join('; ');
 
-    const prompt = `Role: Senior Diagnostic Consultant with 25 years of clinical radiology experience.
+    const diffDxList = (scanContext.differentialDiagnosis || [])
+      .map(d => `${d.condition} [${d.likelihood}]: ${d.reasoning}`).join('; ');
 
-Context: You are reviewing a diagnostic imaging study with the following AI-generated findings:
-- Primary Diagnosis: "${scanContext.diagnosis}"
-- Confidence: ${scanContext.confidence}%
-- Key Findings: ${scanContext.findings?.join('; ') || 'Not specified'}
-- Evidence: ${scanContext.evidence || 'Not specified'}
-- Summary: ${scanContext.summary || 'Not specified'}
+    const findingsList = (scanContext.findings || []).join('\n- ');
 
-Conversation History:
-${formattedHistory}
-The user (a medical professional) is asking: "${question}"
+    const beyondHumanList = (scanContext.beyondHumanFindings || []).join('\n- ');
 
-Instructions:
-- Provide a thorough, clinical-grade answer based on the evidence and conversation history above.
-- If the question relates to pathology, explain the underlying mechanism.
-- If comparing to what a human doctor might miss, highlight AI-specific advantages.
-- Use proper medical terminology but keep it accessible.
-- If the query asks for something not derivable from the scan data, clearly state that additional clinical correlation or imaging is needed.
-- Provide 3-5 sentences for a complete answer.`;
+    const roiList = (scanContext.roiRegions || [])
+      .map(r => `"${r.label}" at (${r.x}%,${r.y}%) [${r.severity}]`).join('; ');
 
-    const response = await ai.models.generateContent({
-      model: 'gemini-2.5-flash',
-      config: { temperature: 0.3, maxOutputTokens: 500 },
-      contents: [{ role: 'user', parts: [{ text: prompt }] }]
+    // ── Build conversation history for multi-turn ──
+    const chatParts = [];
+
+    // First turn: system context as the first "user" message
+    chatParts.push({
+      role: 'user',
+      parts: [{ text: `I am a physician using the Med-Lens AI diagnostic platform. I have a scan with the following AI analysis that I want to discuss with you. Here is the complete diagnostic data:
+
+DIAGNOSIS: ${scanContext.diagnosis || 'N/A'}
+CONFIDENCE: ${scanContext.confidence || 'N/A'}%
+SEVERITY: ${scanContext.severity || 'N/A'}
+CATEGORY: ${scanContext.category || 'General'}
+
+EVIDENCE: ${scanContext.evidence || 'N/A'}
+
+FINDINGS:
+- ${findingsList || 'None available'}
+
+CONDITIONS: ${conditionsList || 'None flagged'}
+
+DIFFERENTIAL DIAGNOSIS: ${diffDxList || 'None available'}
+
+SUB-VISUAL AI FINDINGS:
+- ${beyondHumanList || 'None available'}
+
+ROI REGIONS: ${roiList || 'None marked'}
+
+PROGNOSIS: ${scanContext.prognosis || 'N/A'}
+RECOMMENDATIONS: ${scanContext.recommendation || 'N/A'}
+SUMMARY: ${scanContext.summary || 'N/A'}
+${scanContext.criticalAlert ? `CRITICAL ALERT: ${scanContext.criticalAlert}` : ''}
+
+Please act as my senior clinical consultant. Give detailed, evidence-based answers grounded in this scan data. Use medical terminology with brief explanations. Always provide comprehensive responses of 4-8 sentences minimum.` }]
     });
 
-    res.json({ status: 'success', answer: response.text || 'Core timeout.' });
+    // The model's initial acknowledgment
+    chatParts.push({
+      role: 'model',
+      parts: [{ text: `I've thoroughly reviewed the complete diagnostic profile. The primary finding is "${scanContext.diagnosis}" with ${scanContext.confidence}% confidence, classified as ${scanContext.severity} severity in the ${scanContext.category || 'General'} category. I have access to all findings, conditions, differential diagnoses, ROI regions, sub-visual AI telemetry, and clinical recommendations. I'm ready to provide detailed clinical consultation. What would you like to discuss?` }]
+    });
+
+    // Add conversation history as alternating turns
+    if (history && history.length > 1) {
+      // Skip the first assistant message (it's our greeting), process the rest
+      for (let i = 1; i < history.length; i++) {
+        const msg = history[i];
+        chatParts.push({
+          role: msg.role === 'user' ? 'user' : 'model',
+          parts: [{ text: msg.content }]
+        });
+      }
+    }
+
+    // Add the current question
+    chatParts.push({
+      role: 'user',
+      parts: [{ text: question }]
+    });
+
+    console.log(`🧠 [NEURAL-CHAT] Sending ${chatParts.length} turns to Gemini...`);
+
+    // ── Call Gemini via fallback-enabled helper ──
+    let aiAnswer = await callGeminiText(chatParts);
+
+    console.log(`🧠 [NEURAL-CHAT] Response length: ${aiAnswer.length} chars`);
+    console.log(`🧠 [NEURAL-CHAT] First 200 chars: "${aiAnswer.substring(0, 200)}..."`);
+
+    // ── Parse suggested follow-ups if present ──
+    let suggestions = [];
+    const suggestMatch = aiAnswer.match(/SUGGESTED_FOLLOWUPS:\s*\[([^\]]+)\]/);
+    if (suggestMatch) {
+      try {
+        suggestions = JSON.parse(`[${suggestMatch[1]}]`);
+      } catch (e) {
+        suggestions = suggestMatch[1].split('","').map(s => s.replace(/^"|"$/g, '').trim()).filter(Boolean);
+      }
+      aiAnswer = aiAnswer.replace(/\n?SUGGESTED_FOLLOWUPS:\s*\[.*\]/, '').trim();
+    }
+
+    // ── Fallback suggestions ──
+    if (suggestions.length === 0) {
+      const sev = scanContext.severity || 'normal';
+      if (sev === 'critical' || sev === 'suspicious') {
+        suggestions = [
+          "What urgent interventions should be considered?",
+          "What is the differential diagnosis for this finding?",
+          "What additional imaging would you recommend?"
+        ];
+      } else {
+        suggestions = [
+          "Are there any subtle findings that warrant monitoring?",
+          "What preventive measures would you recommend?",
+          "When should follow-up imaging be scheduled?"
+        ];
+      }
+    }
+
+    if (!aiAnswer || aiAnswer.length < 20) {
+      // Response too short — retry with simplified prompt
+      console.warn('🧠 [NEURAL-CHAT] Response too short, attempting simplified retry...');
+      aiAnswer = await callGeminiText([{
+        role: 'user',
+        parts: [{ text: `You are a senior diagnostic radiologist. A scan shows: "${scanContext.diagnosis}" (${scanContext.confidence}% confidence, ${scanContext.severity} severity). Findings: ${(scanContext.findings || []).slice(0, 3).join('; ')}. Summary: ${scanContext.summary || 'N/A'}.\n\nThe physician asks: "${question}"\n\nProvide a detailed, comprehensive clinical answer in 4-8 sentences. Use medical terminology with explanations. Reference specific findings from the scan data.` }]
+      }]);
+      console.log(`🧠 [NEURAL-CHAT] Retry response length: ${aiAnswer.length} chars`);
+    }
+
+    res.json({
+      status: 'success',
+      answer: aiAnswer || 'I was unable to generate a response for this query. Please try asking a more specific clinical question about the scan findings.',
+      suggestions: suggestions.slice(0, 3)
+    });
+
   } catch (err) {
-    res.status(500).json({ status: 'error', message: err.message });
+    console.error('🧠 [NEURAL-CHAT] ERROR:', err.message || err);
+    console.error('🧠 [NEURAL-CHAT] Full error:', JSON.stringify(err, null, 2));
+
+    // ── Intelligent fallback based on actual scan data ──
+    const fallbackDiag = scanContext.diagnosis || 'the imaging study';
+    const fallbackSev = scanContext.severity || 'normal';
+    let fallbackAnswer = '';
+
+    if (fallbackSev === 'critical') {
+      fallbackAnswer = `**⚠️ AI reasoning core temporarily unavailable.** Based on cached data, this study shows a **critical finding**: "${fallbackDiag}" with ${scanContext.confidence || 'high'}% confidence.\n\n**Key findings from the scan:**\n${(scanContext.findings || []).slice(0, 3).map(f => `- ${f}`).join('\n') || '- Awaiting detailed analysis'}\n\n**Immediate recommendation:** ${scanContext.recommendation || 'Clinical correlation and specialist consultation recommended urgently.'}\n\nPlease retry your question for full AI-powered analysis.`;
+    } else if (fallbackSev === 'suspicious') {
+      fallbackAnswer = `**Temporary processing delay.** The scan "${fallbackDiag}" has flagged suspicious findings:\n\n${(scanContext.findings || []).slice(0, 3).map(f => `- ${f}`).join('\n') || '- Detailed findings pending'}\n\n**Prognosis:** ${scanContext.prognosis || 'Requires further clinical correlation.'}\n**Next steps:** ${scanContext.recommendation || 'Follow-up imaging recommended.'}\n\nPlease retry for a complete AI consultation.`;
+    } else {
+      fallbackAnswer = `**Temporary processing delay.** Here is what I have from the diagnostic data:\n\n**Diagnosis:** ${fallbackDiag} (${scanContext.confidence || 'N/A'}% confidence)\n**Summary:** ${scanContext.summary || 'Standard imaging study.'}\n\n${(scanContext.findings || []).length > 0 ? `**Key findings:**\n${scanContext.findings.slice(0, 3).map(f => `- ${f}`).join('\n')}` : ''}\n\nPlease retry your question for a complete AI-powered response.`;
+    }
+
+    res.status(200).json({
+      status: 'success',
+      answer: fallbackAnswer,
+      suggestions: [
+        "Summarize the key findings for me",
+        "What should I monitor in follow-up?",
+        "What findings might a general physician miss?"
+      ]
+    });
   }
 });
 
