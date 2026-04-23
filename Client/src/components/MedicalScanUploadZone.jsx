@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion, AnimatePresence } from 'framer-motion';
-import { UploadCloud, FileImage, ShieldAlert, CheckCircle2, Activity, ChevronDown, User, Camera, Heart, Wind } from 'lucide-react';
+import { UploadCloud, FileImage, ShieldAlert, CheckCircle2, Activity, ChevronDown, User, Camera, Heart, Wind, Zap, X } from 'lucide-react';
 
 const SYMPTOM_OPTIONS = [
   'Fever', 'Cough', 'Chest Pain', 'Shortness of Breath',
@@ -83,6 +83,7 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
     );
   };
 
+  // Only preview the file — do NOT trigger the API call yet
   const processFile = (selectedFile) => {
     setValidationError(null);
     setFile(null);
@@ -97,17 +98,21 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
     const reader = new FileReader();
     reader.onloadend = () => setImagePreview(reader.result);
     reader.readAsDataURL(selectedFile);
+    // Context is collected at submit time, not drop time
+  };
 
+  // Triggered by the "Analyze Scan" button — collects current context and calls onUpload
+  const handleSubmitScan = () => {
+    if (!file || isProcessing) return;
     const clinicalContext = {
       notes: clinicalNotes,
       age: patientAge,
       symptoms: selectedSymptoms.join(', '),
       smokingHistory: smokingHistory
     };
-
     if (onUpload) {
       clearDrafts();
-      onUpload(selectedFile, clinicalContext);
+      onUpload(file, clinicalContext);
     }
   };
 
@@ -119,7 +124,7 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
     if (acceptedFiles?.length > 0) {
       processFile(acceptedFiles[0]);
     }
-  }, [onUpload, clinicalNotes, patientAge, selectedSymptoms, smokingHistory]);
+  }, []);
 
   const { getRootProps, getInputProps, isDragActive, isDragAccept, isDragReject } = useDropzone({
     onDrop,
@@ -202,13 +207,16 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
                 {imagePreview && (
                   <img src={imagePreview} alt="Clinical Scan" className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-opacity" />
                 )}
-                <motion.div
-                  initial={{ top: "0%" }}
-                  animate={{ top: "100%" }}
-                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
-                  className="absolute left-0 w-full h-[2px] bg-brand shadow-[0_0_10px_rgba(88,166,255,0.6)] z-10"
-                />
                 <div className="absolute inset-0 shadow-[inset_0_0_60px_rgba(0,0,0,0.6)] pointer-events-none" />
+                {/* Remove file button */}
+                <button
+                  type="button"
+                  onClick={(e) => { e.stopPropagation(); setFile(null); setImagePreview(null); }}
+                  className="absolute top-2 right-2 bg-black/60 border border-white/10 text-white rounded-full p-1.5 hover:bg-accent-rose/80 transition-all z-20"
+                  title="Remove scan"
+                >
+                  <X size={12} />
+                </button>
               </div>
 
               <h3 className="text-base font-semibold text-tx-primary mb-2">Scan Uploaded</h3>
@@ -216,6 +224,7 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
                 <CheckCircle2 className="w-4 h-4 text-accent-emerald" />
                 <span className="text-xs font-mono text-tx-secondary truncate max-w-[200px]">{file.name}</span>
               </div>
+              <p className="text-[11px] text-tx-muted mt-2">Fill in clinical context below, then click <span className="text-brand font-semibold">Analyze Scan</span></p>
             </motion.div>
           ) : (
             <motion.div
@@ -438,6 +447,27 @@ const MedicalScanUploadZone = ({ onUpload, isProcessing, error }) => {
           disabled={isProcessing}
         />
       </motion.div>
+
+      {/* ── Analyze Scan CTA ── */}
+      <AnimatePresence>
+        {file && !isProcessing && (
+          <motion.div
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 8 }}
+            className="mt-4 w-full"
+          >
+            <button
+              type="button"
+              onClick={handleSubmitScan}
+              className="w-full btn-primary py-3.5 text-sm font-bold tracking-wide flex items-center justify-center gap-2 shadow-glow-md"
+            >
+              <Zap size={16} />
+              Analyze Scan
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
