@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { jsPDF } from 'jspdf';
 import MedicalScanUploadZone from '../components/MedicalScanUploadZone';
 import NeuralClinicalChat from '../components/NeuralClinicalChat';
 import Navbar from '../components/Navbar';
 import api, { setupInterceptors } from '../services/api';
+import { generateClinicalPDF } from '../utils/generatePDF';
 import { Activity, Download, X, ArrowLeft, ShieldCheck, Zap, Crosshair, Volume2, FileJson, GitCompare, MessageSquareCode, Pin } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '../components/AuthOverlay';
@@ -106,6 +106,7 @@ const ScanPage = () => {
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [pinnedScans, setPinnedScans] = useState([]);
   const [showComparison, setShowComparison] = useState(false);
+  const [clinicalContext, setClinicalContext] = useState({});
 
   // For ROI tracking
   const imgRef = useRef(null);
@@ -142,10 +143,11 @@ const ScanPage = () => {
     setupInterceptors(setIsLoading, setError);
   }, []);
 
-  const handleScanUpload = useCallback(async (file, clinicalContext = {}) => {
+  const handleScanUpload = useCallback(async (file, ctx = {}) => {
     setDiagnosisResult(null);
     setImgRect(null);
     setScanFile(file);
+    setClinicalContext(ctx);
 
     if (file && file.type.startsWith('image/')) {
       const reader = new FileReader();
@@ -155,10 +157,10 @@ const ScanPage = () => {
 
     const formData = new FormData();
     formData.append('scan', file);
-    formData.append('notes', clinicalContext.notes || '');
-    formData.append('age', clinicalContext.age || '');
-    formData.append('symptoms', clinicalContext.symptoms || '');
-    formData.append('smokingHistory', clinicalContext.smokingHistory || '');
+    formData.append('notes', ctx.notes || '');
+    formData.append('age', ctx.age || '');
+    formData.append('symptoms', ctx.symptoms || '');
+    formData.append('smokingHistory', ctx.smokingHistory || '');
     const stored = localStorage.getItem('medlens_auth_user');
     if (stored) {
       const userObj = JSON.parse(stored);
@@ -181,150 +183,11 @@ const ScanPage = () => {
     }
   }, []);
 
-  const generateClinicalPDF = () => {
+  const generateClinicalPDFHandler = () => {
     if (!diagnosisResult) return;
-
-    const doc = new jsPDF();
-    const dateStr = new Date().toLocaleString();
-    const randomId = Math.random().toString(36).substr(2, 10).toUpperCase();
-    const severity = diagnosisResult.severity || 'normal';
-
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 45, 'F');
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(24);
-    doc.text("MED-LENS AI VAULT", 20, 25);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    doc.text("CLINICAL DIAGNOSTIC REPORT | ID: " + randomId, 20, 32);
-    doc.text("CONFIDENTIAL - HIPAA COMPLIANT", 20, 37);
-
-    doc.setFillColor(248, 250, 252);
-    doc.rect(140, 10, 60, 25, 'F');
-    doc.setTextColor(15, 23, 42);
-    doc.setFontSize(8);
-    doc.text("DATE: " + dateStr.split(',')[0], 145, 18);
-    doc.text("MODALITY: DICOM/AI-V", 145, 23);
-    doc.text("ENGINE: v4.2.0-FLASH", 145, 28);
-
-    const sevColor = severity === 'critical' ? [239, 68, 68] : severity === 'suspicious' ? [251, 146, 60] : severity === 'monitor' ? [251, 191, 36] : [16, 185, 129];
-    doc.setFillColor(sevColor[0], sevColor[1], sevColor[2]);
-    doc.rect(0, 45, 210, 1.5, 'F');
-
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(16);
-    doc.setFont("helvetica", "bold");
-    doc.text("AUTOMATED CLINICAL INTERPRETATION", 20, 65);
-
-    doc.setFontSize(11);
-    doc.setTextColor(100, 116, 139);
-    doc.text("I. CLINICAL IMPRESSION", 20, 78);
-    doc.setFillColor(241, 245, 249);
-    doc.setDrawColor(226, 232, 240);
-    doc.roundedRect(20, 82, 170, 22, 2, 2, 'FD');
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(sevColor[0], sevColor[1], sevColor[2]);
-    doc.setFontSize(12);
-    const diagLines = doc.splitTextToSize(diagnosisResult.diagnosis?.toUpperCase() || 'NO ACUTE PATHOLOGY DETECTED', 160);
-    doc.text(diagLines, 25, 90);
-
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("CONFIDENCE:", 25, 98);
-    doc.setTextColor(30, 41, 59);
-    doc.text(`${diagnosisResult.confidence}%`, 60, 98);
-
-    let nextY = 120;
-
-    doc.setTextColor(100, 116, 139);
-    doc.setFontSize(11);
-    doc.text("II. DETAILED FINDINGS", 20, nextY);
-    nextY += 8;
-
-    if (diagnosisResult.conditions?.length > 0) {
-      diagnosisResult.conditions.forEach((c) => {
-        if (nextY > 270) { doc.addPage(); nextY = 20; }
-        doc.setFillColor(248, 250, 252);
-        doc.rect(20, nextY, 170, 8, 'F');
-        doc.setFontSize(9);
-        doc.setFont("helvetica", "bold");
-        doc.setTextColor(30, 41, 59);
-        doc.text(c.name.toUpperCase(), 25, nextY + 5.5);
-        doc.setFont("helvetica", "normal");
-        doc.setTextColor(100, 116, 139);
-        doc.text(`${c.probability}% | ${c.severity.toUpperCase()}`, 110, nextY + 5.5);
-        nextY += 9;
-      });
-    }
-
-    nextY += 10;
-    if (nextY > 250) { doc.addPage(); nextY = 20; }
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(100, 116, 139);
-    doc.text("III. ANALYSIS SUMMARY", 20, nextY);
-    nextY += 8;
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "normal");
-    doc.setTextColor(51, 65, 85);
-    const summaryLines = doc.splitTextToSize(diagnosisResult.summary || diagnosisResult.message || 'Standard clinical interpretation.', 170);
-    doc.text(summaryLines, 20, nextY);
-    nextY += (summaryLines.length * 6) + 15;
-
-    if (nextY > 250) { doc.addPage(); nextY = 20; }
-    doc.setFillColor(severity === 'critical' ? 254 : 240, severity === 'critical' ? 242 : 253, severity === 'critical' ? 242 : 250);
-    doc.rect(20, nextY, 170, 25, 'F');
-    doc.setFont("helvetica", "bold");
-    doc.setTextColor(sevColor[0], sevColor[1], sevColor[2]);
-    doc.text("IV. RECOMMENDATIONS", 25, nextY + 10);
-    doc.setFontSize(9);
-    doc.setFont("helvetica", "normal");
-    const recLines = doc.splitTextToSize(diagnosisResult.recommendation || 'Clinical correlation recommended.', 160);
-    doc.text(recLines, 25, nextY + 17);
-
-    const pageCount = doc.internal.getNumberOfPages();
-    for (let i = 1; i <= pageCount; i++) {
-      doc.setPage(i);
-      doc.setFontSize(8);
-      doc.setTextColor(148, 163, 184);
-      doc.text("AI-GENERATED REPORT — NOT A SUBSTITUTE FOR PHYSICIAN VALIDATION.", 20, 285);
-      doc.text(`PAGE ${i} / ${pageCount}`, 180, 285);
-      doc.line(20, 280, 190, 280);
-    }
-
-    if (scanFile && scanFile.type.startsWith('image/')) {
-      doc.addPage();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 15, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(10);
-      doc.text("IMAGING ATTACHMENT — " + randomId, 20, 10);
-
-      const fileUrl = URL.createObjectURL(scanFile);
-      const img = new Image();
-      img.src = fileUrl;
-      img.onload = () => {
-        try {
-          const canvas = document.createElement('canvas');
-          canvas.width = img.width;
-          canvas.height = img.height;
-          const ctx = canvas.getContext('2d');
-          ctx.fillStyle = "#07090F";
-          ctx.fillRect(0, 0, canvas.width, canvas.height);
-          ctx.drawImage(img, 0, 0);
-          const safeDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-          doc.addImage(safeDataUrl, 'JPEG', 20, 30, 170, 170, undefined, 'FAST');
-        } catch (e) {
-          doc.addImage(img, 'JPEG', 20, 30, 170, 170, undefined, 'FAST');
-        }
-        doc.save(`MedLens_Report_${randomId}.pdf`);
-      };
-    } else {
-      doc.save(`MedLens_Report_${randomId}.pdf`);
-    }
+    generateClinicalPDF({ diagnosisResult, clinicalContext, scanFile, user });
   };
+
 
   const playAudioSummary = () => {
     if (!diagnosisResult) return;
@@ -826,7 +689,7 @@ const ScanPage = () => {
                     <div className="space-y-4 pt-4">
                       <h4 className="text-xs font-bold text-tx-muted tracking-widest uppercase">Export & Audit</h4>
                       <div className="flex flex-wrap gap-3">
-                        <button onClick={generateClinicalPDF} className="btn-primary flex-1 min-w-[200px]">
+                        <button onClick={generateClinicalPDFHandler} className="btn-primary flex-1 min-w-[200px]">
                           <Download size={16} /> Generate Complete Dossier
                         </button>
                         <button onClick={exportFHIR} className="btn-secondary">
